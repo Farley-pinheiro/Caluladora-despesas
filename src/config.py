@@ -27,11 +27,15 @@ def _resolve_db(env_value: str) -> str:
 class BaseConfig:
     """Configuração base compartilhada por todos os ambientes."""
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     DB_PATH: str = _resolve_db(os.getenv("DB_PATH", "controle_dividas.db"))
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     TESTING: bool = False
     DEBUG: bool = False
 
+    @property
+    def is_postgres(self) -> bool:
+        return self.DATABASE_URL.startswith("postgres")
 
 class DevelopmentConfig(BaseConfig):
     """Configuração para ambiente de desenvolvimento."""
