@@ -1,0 +1,74 @@
+# Controle de Dívidas — .gitignore
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+.installed.cfg
+lib/
+lib64/
+MANIFEST
+
+# --- Ambientes Virtuais ---
+venv/
+.venv/
+env/
+ENV/
+.env/
+.ENV/
+
+# --- Variáveis de Ambiente ---
+.env
+*.env
+!.env.example
+
+# --- Banco de Dados ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Logs ---
+*.log
+logs/
+
+# --- PyInstaller ---
+*.spec
+dist/
+build/
+
+# --- Pytest ---
+.pytest_cache/
+.cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# --- Flask ---
+instance/
+.webassets-cache

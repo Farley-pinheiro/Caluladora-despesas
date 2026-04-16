@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Controle de Dívidas{% endblock %}
+
+{% block content %}
+<section class="dashboard">
+
+    <!-- ═══ HERO ═══ -->
+    <div class="hero">
+        <div class="hero-inner">
+            <div class="hero-main">
+                <p class="hero-eyebrow">Total em dívidas ativas</p>
+                <p class="hero-amount">
+                    R$ {{ "%.2f"|format(resumo.total_restante)|replace(".", ",")|replace(",", ".", 1) if "." in "%.2f"|format(resumo.total_restante) else "%.2f"|format(resumo.total_restante) }}
+                </p>
+                {% if resumo.total_dividas > 0 %}
+                <div class="hero-progress-wrap">
+                    <div class="hero-progress-label">
+                        <span>Progresso geral das parcelas</span>
+                        <span>{{ pct_quitado }}%</span>
+                    </div>
+                    <div class="hero-progress-track">
+                        <div class="hero-progress-fill" style="width: {{ pct_quitado }}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat-label">Parcelas/mês</span>
+                    <span class="hero-stat-value">R$ {{ "%.0f"|format(resumo.gasto_mensal) }}</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-label">Ativas</span>
+                    <span class="hero-stat-value">{{ resumo.dividas_ativas }}</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-label">Quitadas</span>
+                    <span class="hero-stat-value">{{ resumo.dividas_quitadas }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CHART + SECTION HEADER ═══ -->
+    {% if chart_data %}
+    <div class="dashboard-row">
+        <div class="chart-card">
+            <h3>Por Categoria</h3>
+            <canvas id="donut-chart" width="160" height="160"></canvas>
+            <div class="chart-legend" id="chart-legend"></div>
+        </div>
+        <div>
+    {% endif %}
+
+        <!-- Section Header -->
+        <div class="section-header">
+            <h2 class="section-title">Suas Dívidas</h2>
+            <div class="section-actions">
+                {% if resumo.dividas %}
+                <button class="btn-secondary btn-sm" id="btn-exportar-csv">↓ Exportar CSV</button>
+                <button class="btn-secondary btn-sm" id="btn-abrir-simulador">⚡ Simular</button>
+                {% endif %}
+                <button class="btn-primary btn-sm" id="btn-abrir-modal-2">+ Adicionar</button>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        {% if resumo.dividas %}
+        <div class="filter-bar">
+            <input type="search" id="filtro-busca" class="filter-search" placeholder="Buscar por nome...">
+            <select id="filtro-categoria" class="filter-select">
+                <option value="">Todas as categorias</option>
+                {% for cat in categorias %}
+                <option value="{{ cat }}">{{ cat }}</option>
+                {% endfor %}
+            </select>
+            <div class="filter-pills">
+                <button class="filter-pill active" data-filtro="todos">Todas</button>
+                <button class="filter-pill" data-filtro="ativas">Ativas</button>
+                <button class="filter-pill" data-filtro="quitadas">Quitadas</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Cards -->
+        {% if resumo.dividas %}
+        <div class="dividas-grid" id="dividas-grid">
+            {% for div in resumo.dividas %}
+            <article class="divida-card {% if div.esta_quitada %}divida-card--quitada{% endif %}"
+                     id="card-{{ div.id }}"
+                     data-id="{{ div.id }}"
+                     data-cat="{{ div.categoria }}"
+                     data-nome="{{ div.nome | lower }}"
+                     data-status="{{ 'quitada' if div.esta_quitada else 'ativa' }}">
+
+                <div class="divida-card-header">
+                    <div class="divida-card-title">
+                        <span class="divida-categoria">{{ div.categoria }}</span>
+                        <h3 class="divida-nome">{{ div.nome }}</h3>
+                        {% if div.dia_vencimento and not div.esta_quitada %}
+                            {% if div.dias_para_vencimento is not none %}
+                                {% if div.dias_para_vencimento <= 3 %}
+                                <span class="vencimento-badge vencimento-badge--urgente">🔴 Vence em {{ div.dias_para_vencimento }} dia{{ 's' if div.dias_para_vencimento != 1 }}</span>
+                                {% elif div.dias_para_vencimento <= 10 %}
+                                <span class="vencimento-badge vencimento-badge--proximo">🟡 Vence em {{ div.dias_para_vencimento }} dias</span>
+                                {% else %}
+                                <span class="vencimento-badge vencimento-badge--ok">✓ Dia {{ div.dia_vencimento }}</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="vencimento-badge vencimento-badge--neutro">Dia {{ div.dia_vencimento }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <span class="divida-badge {% if div.esta_quitada %}badge--green{% else %}badge--red{% endif %}">
+                        {% if div.esta_quitada %}Quitada{% else %}Ativa{% endif %}
+                    </span>
+                </div>
+
+                <div class="divida-valores">
+                    <div class="valor-item">
+                        <span class="valor-label">Restante</span>
+                        <span class="valor-num {% if not div.esta_quitada %}valor-num--destaque{% endif %}">
+                            R$ {{ "%.2f"|format(div.valor_restante) }}
+                        </span>
+                    </div>
+                    <div class="valor-item">
+                        <span class="valor-label">Total</span>
+                        <span class="valor-num">R$ {{ "%.2f"|format(div.valor_total) }}</span>
+                    </div>
+                    <div class="valor-item">
+                        <span class="valor-label">Parcela</span>
+                        <span class="valor-num">R$ {{ "%.2f"|format(div.valor_parcela) }}</span>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-labels">
+                        <span>{{ div.parcelas_pagas }}/{{ div.total_parcelas }} parcelas</span>
+                        <span>{{ div.porcentagem_paga }}%</span>
+                    </div>
+                    <div class="progress-track" role="progressbar" aria-valuenow="{{ div.porcentagem_paga }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-fill {% if div.esta_quitada %}progress-fill--green{% endif %}"
+                             style="width: {{ div.porcentagem_paga }}%"></div>
+                    </div>
+                </div>
+
+                <div class="divida-card-actions">
+                    {% if not div.esta_quitada %}
+                    <button class="btn-action btn-pagar"
+                            id="btn-pagar-{{ div.id }}"
+                            onclick="pagarParcela({{ div.id }})">
+                        Pagar Parcela
+                    </button>
+                    {% endif %}
+                    <button class="btn-action btn-excluir"
+                            id="btn-excluir-{{ div.id }}"
+                            onclick="confirmarExclusao({{ div.id }}, '{{ div.nome }}')">
+                        Excluir
+                    </button>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">💸</div>
+            <h3>Tudo organizado por aqui</h3>
+            <p>Cadastre suas dívidas negociadas para acompanhar o progresso e nunca perder um vencimento.</p>
+            <button class="btn-primary" id="btn-abrir-modal-3">+ Cadastrar primeira dívida</button>
+        </div>
+        {% endif %}
+
+    {% if chart_data %}
+        </div><!-- end right column -->
+    </div><!-- end dashboard-row -->
+    {% endif %}
+
+</section>
+
+<!-- Modal: Confirmar Exclusão -->
+<div class="modal-overlay" id="modal-confirmar" role="dialog" aria-modal="true" aria-labelledby="confirmar-title">
+    <div class="modal-card modal-card--sm">
+        <div class="modal-header">
+            <h2 id="confirmar-title">Excluir Dívida</h2>
+            <button class="modal-close" onclick="fecharModalConfirmar()">✕</button>
+        </div>
+        <p class="modal-body-text">Tem certeza que deseja excluir <strong id="nome-confirmar"></strong>? Esta ação não pode ser desfeita.</p>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="fecharModalConfirmar()">Cancelar</button>
+            <button class="btn-danger" id="btn-confirmar-excluir">Excluir</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Simulador -->
+<div class="modal-overlay" id="modal-simulador" role="dialog" aria-modal="true" aria-labelledby="simulador-title">
+    <div class="modal-card modal-card--sm">
+        <div class="modal-header">
+            <h2 id="simulador-title">⚡ Simulador de Pagamento</h2>
+            <button class="modal-close" id="btn-fechar-simulador">✕</button>
+        </div>
+        <p class="modal-body-text">Simule o impacto de pagar um valor extra por mês em uma dívida.</p>
+        <div class="form-grid">
+            <div class="form-group full-width">
+                <label for="sim-divida">Dívida</label>
+                <select id="sim-divida">
+                    {% for div in resumo.dividas %}
+                    {% if not div.esta_quitada %}
+                    <option value="{{ div.id }}"
+                            data-restante="{{ div.valor_restante }}"
+                            data-parcela="{{ div.valor_parcela }}"
+                            data-restantes="{{ div.parcelas_restantes }}">
+                        {{ div.nome }} — R$ {{ "%.2f"|format(div.valor_restante) }} restante
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group full-width">
+                <label for="sim-extra">Valor extra por mês (R$)</label>
+                <input type="number" id="sim-extra" placeholder="Ex: 200" min="1" step="0.01">
+                <span class="form-hint">Quanto a mais você pagaria além da parcela mensal</span>
+            </div>
+        </div>
+        <div class="simulator-result" id="sim-result">
+            <div class="simulator-result-line">
+                <span>Parcelas restantes sem extra</span>
+                <strong id="sim-parcelas-orig">—</strong>
+            </div>
+            <div class="simulator-result-line">
+                <span>Parcelas com o valor extra</span>
+                <strong id="sim-parcelas-novo">—</strong>
+            </div>
+            <div class="simulator-result-line">
+                <span>Meses economizados</span>
+                <strong class="simulator-highlight" id="sim-economia-meses">—</strong>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" id="btn-cancelar-simulador">Fechar</button>
+            <button class="btn-primary" id="btn-simular">Calcular</button>
+        </div>
+    </div>
+</div>
+
+{% if chart_data %}
+<script id="donut-data" type="application/json">{{ chart_data | tojson }}</script>
+{% endif %}
+{% endblock %}
