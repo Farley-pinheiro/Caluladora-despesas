@@ -38,11 +38,19 @@ def create_app(env: str = "development") -> Flask:
 
     # --- Migrações de Schema ---
     db_path = app.config["DB_PATH"]
-    if db_path != ":memory:":
-        aplicar_migracoes(db_path)
+    database_url = app.config.get("DATABASE_URL", "")
+    is_postgres = app.config.get("is_postgres", False)
+
+    if is_postgres:
+        from app.repositories.postgresql_divida_repository import PostgreSQLDividaRepository
+        repository = PostgreSQLDividaRepository(db_url=database_url)
+        aplicar_migracoes(db_url=database_url, is_postgres=True)
+    else:
+        if db_path != ":memory:":
+            aplicar_migracoes(db_path=db_path)
+        repository = SQLiteDividaRepository(db_path=db_path)
 
     # --- Montagem do Grafo de Dependências (DIP) ---
-    repository = SQLiteDividaRepository(db_path=db_path)
     service = DividaService(repository=repository)
 
     # --- Injeção nos Controllers ---
